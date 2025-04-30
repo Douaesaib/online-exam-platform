@@ -1,3 +1,4 @@
+const API_URL = 'http://localhost:5000';
 // User management
 let currentUser = null;
 
@@ -45,69 +46,70 @@ function showRegistrationForm() {
     registerModal.show();
 }
 
-function handleLogin(e) {
+async function handleLogin(e) {
     e.preventDefault();
-    
+
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     const userType = document.getElementById('userType').value;
 
-    // For demo purposes, we'll use localStorage
-    // In a real application, this would be an API call
-    const users = JSON.parse(localStorage.getItem('users')) || [];
-    const user = users.find(u => u.email === email && u.password === password && u.userType === userType);
+    try {
+        const response = await fetch(`${API_URL}/api/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password, userType })
+        });
 
-    if (user) {
-        currentUser = user;
-        localStorage.setItem('currentUser', JSON.stringify(user));
-        
-        // Close the modal
-        const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
-        loginModal.hide();
-        
-        // Redirect based on user type
-        if (userType === 'teacher') {
-            window.location.href = 'teacher-dashboard.html';
+        const data = await response.json();
+
+        if (response.ok) {
+            // Connexion réussie
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('currentUser', JSON.stringify(data.user));
+            // Fermer la modal
+            const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
+            loginModal.hide();
+            // Rediriger selon le type d'utilisateur
+            if (data.user.userType === 'teacher') {
+                window.location.href = 'teacher-dashboard.html';
+            } else {
+                window.location.href = 'student-dashboard.html';
+            }
         } else {
-            window.location.href = 'student-dashboard.html';
+            alert(data.message || 'Erreur lors de la connexion.');
         }
-    } else {
-        alert('Invalid credentials. Please try again.');
+    } catch (err) {
+        alert('Erreur réseau ou serveur.');
     }
 }
 
-function handleRegistration(e) {
+async function handleRegistration(e) {
     e.preventDefault();
-    
+
     const name = document.getElementById('name').value;
     const email = document.getElementById('regEmail').value;
     const password = document.getElementById('regPassword').value;
     const userType = document.getElementById('regUserType').value;
 
-    // Get existing users or initialize empty array
-    const users = JSON.parse(localStorage.getItem('users')) || [];
+    try {
+        const response = await fetch(`${API_URL}/api/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email, password, userType })
+        });
 
-    // Check if user already exists
-    if (users.some(user => user.email === email)) {
-        alert('User already exists. Please login instead.');
-        return;
+        const data = await response.json();
+
+        if (response.ok) {
+            alert('Inscription réussie ! Connectez-vous.');
+            // Fermer la modal d'inscription
+            const registerModal = bootstrap.Modal.getInstance(document.getElementById('registerModal'));
+            registerModal.hide();
+            showLoginForm();
+        } else {
+            alert(data.message || "Erreur lors de l'inscription.");
+        }
+    } catch (err) {
+        alert('Erreur réseau ou serveur.');
     }
-
-    // Add new user
-    users.push({
-        name,
-        email,
-        password,
-        userType
-    });
-
-    // Save to localStorage
-    localStorage.setItem('users', JSON.stringify(users));
-
-    // Close the registration modal
-    const registerModal = bootstrap.Modal.getInstance(document.getElementById('registerModal'));
-    registerModal.hide();
-
-    alert('Registration successful! Please login.');
-    showLoginForm();
 }

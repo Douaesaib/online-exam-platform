@@ -33,14 +33,12 @@ router.get('/available', auth, isStudent, async (req, res) => {
 // Create new exam
 router.post('/', auth, isTeacher, async (req, res) => {
     try {
-        const exam = new Exam({
-            ...req.body,
-            createdBy: req.user.userId
-        });
+        const { title, duration, questions } = req.body;
+        const exam = new Exam({ title, duration, questions, createdBy: req.user.userId });
         await exam.save();
         res.status(201).json(exam);
-    } catch (error) {
-        res.status(500).json({ message: 'Error creating exam', error: error.message });
+    } catch (err) {
+        res.status(500).json({ message: "Erreur lors de la création de l'examen", error: err.message });
     }
 });
 
@@ -109,6 +107,16 @@ router.delete('/:id', auth, isTeacher, async (req, res) => {
         res.json({ message: 'Exam deleted successfully' });
     } catch (error) {
         res.status(500).json({ message: 'Error deleting exam', error: error.message });
+    }
+});
+
+// Liste des examens (pour tous)
+router.get('/', async (req, res) => {
+    try {
+        const exams = await Exam.find();
+        res.json(exams);
+    } catch (err) {
+        res.status(500).json({ message: "Erreur lors de la récupération des examens", error: err.message });
     }
 });
 
