@@ -2,8 +2,11 @@ const mongoose = require('mongoose');
 
 const questionSchema = new mongoose.Schema({
     text: String,
-    options: [String],
-    answer: String
+    type: { type: String, enum: ['qcm', 'direct'], default: 'qcm' }, // qcm ou direct
+    options: [String], // Pour QCM
+    answer: String,    // Réponse attendue
+    tolerance: { type: Number, default: 0 }, // Pour question directe (pourcentage d'erreur accepté)
+    media: String // Chemin du fichier joint (image, audio, vidéo)
 });
 
 const examSchema = new mongoose.Schema({

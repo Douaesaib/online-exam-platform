@@ -38,6 +38,45 @@
             </div>
         </div>
     </div>
+    <!-- Modal de modification de question -->
+    <div class="modal fade" id="editQuestionModal" tabindex="-1" aria-labelledby="editQuestionModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="editQuestionModalLabel">Modifier la question</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <form id="editQuestionForm">
+              <div class="mb-2">
+                <label>Texte de la question</label>
+                <input type="text" class="form-control" id="editQText" required>
+              </div>
+              <div class="mb-2">
+                <label>Type</label>
+                <select class="form-select" id="editQType">
+                  <option value="qcm">QCM</option>
+                  <option value="direct">Directe</option>
+                </select>
+              </div>
+              <div id="editQcmFields">
+                <input type="text" class="form-control mb-2" placeholder="Option 1" id="editQOpt1">
+                <input type="text" class="form-control mb-2" placeholder="Option 2" id="editQOpt2">
+                <input type="text" class="form-control mb-2" placeholder="Option 3" id="editQOpt3">
+                <input type="text" class="form-control mb-2" placeholder="Option 4" id="editQOpt4">
+                <input type="text" class="form-control mb-2" placeholder="Bonne réponse (copier/coller une des options)" id="editQAns">
+              </div>
+              <div id="editDirectFields" style="display:none;">
+                <input type="text" class="form-control mb-2" placeholder="Réponse attendue" id="editQDirectAns">
+                <input type="number" class="form-control mb-2" placeholder="Tolérance (%)" id="editQTol" min="0" max="100" value="0">
+              </div>
+              <button type="submit" class="btn btn-primary w-100">Enregistrer</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
     const API_URL = 'http://localhost:5000';
     function logout() {
@@ -56,40 +95,96 @@
         const div = document.createElement('div');
         div.className = 'mb-3 border rounded p-2';
         div.innerHTML = `
+            <label class="form-label">Type de question :</label>
+            <select class="form-select mb-2" id="qtype${idx}" onchange="toggleQuestionType(${idx})">
+                <option value="qcm">QCM</option>
+                <option value="direct">Directe</option>
+            </select>
             <input type="text" class="form-control mb-2" placeholder="Texte de la question" id="qtext${idx}" required>
-            <input type="text" class="form-control mb-2" placeholder="Option 1" id="q${idx}opt1" required>
-            <input type="text" class="form-control mb-2" placeholder="Option 2" id="q${idx}opt2" required>
-            <input type="text" class="form-control mb-2" placeholder="Option 3" id="q${idx}opt3" required>
-            <input type="text" class="form-control mb-2" placeholder="Option 4" id="q${idx}opt4" required>
-            <input type="text" class="form-control mb-2" placeholder="Bonne réponse (copier/coller une des options)" id="q${idx}ans" required>
+            <div id="qcmFields${idx}">
+                <input type="text" class="form-control mb-2" placeholder="Option 1" id="q${idx}opt1" required>
+                <input type="text" class="form-control mb-2" placeholder="Option 2" id="q${idx}opt2" required>
+                <input type="text" class="form-control mb-2" placeholder="Option 3" id="q${idx}opt3" required>
+                <input type="text" class="form-control mb-2" placeholder="Option 4" id="q${idx}opt4" required>
+                <input type="text" class="form-control mb-2" placeholder="Bonne réponse (copier/coller une des options)" id="q${idx}ans" required>
+            </div>
+            <div id="directFields${idx}" style="display:none;">
+                <input type="text" class="form-control mb-2" placeholder="Réponse attendue" id="q${idx}directans">
+                <input type="number" class="form-control mb-2" placeholder="Tolérance (%)" id="q${idx}tol" min="0" max="100" value="0">
+            </div>
+            <label class='form-label mt-2'>Fichier joint (image, audio, vidéo) :</label>
+            <input type='file' class='form-control mb-2' id='q${idx}file' accept='image/*,audio/*,video/*'>
         `;
         questionsContainer.appendChild(div);
         questions.push(idx);
+    }
+
+    window.toggleQuestionType = function(idx) {
+        const type = document.getElementById(`qtype${idx}`).value;
+        const qcmFields = document.getElementById(`qcmFields${idx}`);
+        const directFields = document.getElementById(`directFields${idx}`);
+        qcmFields.style.display = (type === 'qcm') ? '' : 'none';
+        directFields.style.display = (type === 'direct') ? '' : 'none';
+        // Champs QCM
+        ['opt1','opt2','opt3','opt4','ans'].forEach(suffix => {
+            const el = document.getElementById(`q${idx}${suffix}`);
+            if(el) el.required = (type === 'qcm');
+        });
+        // Champs direct
+        const directAns = document.getElementById(`q${idx}directans`);
+        const tol = document.getElementById(`q${idx}tol`);
+        if(directAns) directAns.required = (type === 'direct');
+        if(tol) tol.required = (type === 'direct');
     }
 
     examForm.onsubmit = async function(e) {
         e.preventDefault();
         const title = document.getElementById('examTitle').value;
         const duration = document.getElementById('examDuration').value;
-        const qs = questions.map(idx => ({
-            text: document.getElementById(`qtext${idx}`).value,
-            options: [
-                document.getElementById(`q${idx}opt1`).value,
-                document.getElementById(`q${idx}opt2`).value,
-                document.getElementById(`q${idx}opt3`).value,
-                document.getElementById(`q${idx}opt4`).value
-            ],
-            answer: document.getElementById(`q${idx}ans`).value
-        }));
+        const qs = questions.map(idx => {
+            const type = document.getElementById(`qtype${idx}`).value;
+            if (type === 'qcm') {
+                return {
+                    text: document.getElementById(`qtext${idx}`).value,
+                    type: 'qcm',
+                    options: [
+                        document.getElementById(`q${idx}opt1`).value,
+                        document.getElementById(`q${idx}opt2`).value,
+                        document.getElementById(`q${idx}opt3`).value,
+                        document.getElementById(`q${idx}opt4`).value
+                    ],
+                    answer: document.getElementById(`q${idx}ans`).value
+                };
+            } else {
+                return {
+                    text: document.getElementById(`qtext${idx}`).value,
+                    type: 'direct',
+                    answer: document.getElementById(`q${idx}directans`).value,
+                    tolerance: parseFloat(document.getElementById(`q${idx}tol`).value) || 0
+                };
+            }
+        });
         const token = localStorage.getItem('token');
+        const formData = new FormData();
+        formData.append('title', title);
+        formData.append('duration', duration);
+        formData.append('questions', JSON.stringify(qs));
+        // Ajout des fichiers
+        questions.forEach((idx, i) => {
+            const fileInput = document.getElementById(`q${idx}file`);
+            if (fileInput && fileInput.files.length > 0) {
+                formData.append('mediaFiles', fileInput.files[0]);
+            } else {
+                formData.append('mediaFiles', new Blob()); // placeholder vide
+            }
+        });
         try {
             const res = await fetch(`${API_URL}/api/exams`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ title, duration, questions: qs })
+                body: formData
             });
             if (res.ok) {
                 alert('Examen créé !');
@@ -128,10 +223,98 @@
         myExams.forEach(exam => {
             const li = document.createElement('li');
             li.className = 'list-group-item';
-            li.textContent = `${exam.title} (Durée : ${exam.duration} min)`;
+            li.innerHTML = `<b>${exam.title}</b> (Durée : ${exam.duration} min)`;
+            // Affichage des questions
+            if (exam.questions && exam.questions.length > 0) {
+                li.innerHTML += `<ul class='mt-2'>`;
+                exam.questions.forEach((q, idx) => {
+                    li.innerHTML += `<li>Q${idx+1}: ${q.text} <button class='btn btn-sm btn-warning' onclick='editQuestion("${exam._id}",${idx})'>Modifier</button> <button class='btn btn-sm btn-danger' onclick='deleteQuestion("${exam._id}",${idx})'>Supprimer</button></li>`;
+                });
+                li.innerHTML += `</ul>`;
+            }
             examList.appendChild(li);
         });
     }
+
+    window.deleteQuestion = async function(examId, questionIndex) {
+        if(!confirm('Supprimer cette question ?')) return;
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${API_URL}/api/exams/${examId}/questions/${questionIndex}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if(res.ok) {
+            alert('Question supprimée !');
+            loadExams();
+        } else {
+            alert('Erreur lors de la suppression.');
+        }
+    }
+
+    let currentEditExamId = null;
+    let currentEditQuestionIndex = null;
+
+    window.editQuestion = async function(examId, questionIndex) {
+      currentEditExamId = examId;
+      currentEditQuestionIndex = questionIndex;
+      // Récupère l'examen
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/exams/${examId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const exam = await res.json();
+      const q = exam.questions[questionIndex];
+      document.getElementById('editQText').value = q.text;
+      document.getElementById('editQType').value = q.type;
+      document.getElementById('editQType').dispatchEvent(new Event('change'));
+      if(q.type === 'qcm') {
+        document.getElementById('editQOpt1').value = q.options[0] || '';
+        document.getElementById('editQOpt2').value = q.options[1] || '';
+        document.getElementById('editQOpt3').value = q.options[2] || '';
+        document.getElementById('editQOpt4').value = q.options[3] || '';
+        document.getElementById('editQAns').value = q.answer || '';
+      } else {
+        document.getElementById('editQDirectAns').value = q.answer || '';
+        document.getElementById('editQTol').value = q.tolerance || 0;
+      }
+      const modal = new bootstrap.Modal(document.getElementById('editQuestionModal'));
+      modal.show();
+    }
+
+    document.getElementById('editQuestionForm').onsubmit = async function(e) {
+      e.preventDefault();
+      const type = document.getElementById('editQType').value;
+      let updatedQ = { text: document.getElementById('editQText').value, type };
+      if(type === 'qcm') {
+        updatedQ.options = [
+          document.getElementById('editQOpt1').value,
+          document.getElementById('editQOpt2').value,
+          document.getElementById('editQOpt3').value,
+          document.getElementById('editQOpt4').value
+        ];
+        updatedQ.answer = document.getElementById('editQAns').value;
+      } else {
+        updatedQ.answer = document.getElementById('editQDirectAns').value;
+        updatedQ.tolerance = parseFloat(document.getElementById('editQTol').value) || 0;
+      }
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_URL}/api/exams/${currentEditExamId}/questions/${currentEditQuestionIndex}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(updatedQ)
+      });
+      if(res.ok) {
+        alert('Question modifiée !');
+        bootstrap.Modal.getInstance(document.getElementById('editQuestionModal')).hide();
+        loadExams();
+      } else {
+        alert('Erreur lors de la modification.');
+      }
+    }
+
     loadExams();
     </script>
 </body>
