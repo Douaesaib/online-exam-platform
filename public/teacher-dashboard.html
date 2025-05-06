@@ -223,7 +223,9 @@
         myExams.forEach(exam => {
             const li = document.createElement('li');
             li.className = 'list-group-item';
-            li.innerHTML = `<b>${exam.title}</b> (Durée : ${exam.duration} min)`;
+            li.innerHTML = `<b>${exam.title}</b> (Durée : ${exam.duration} min)
+             <button class='btn btn-sm btn-danger float-end' onclick='deleteExam("${exam._id}")'>Supprimer l’examen</button>`;
+
             // Affichage des questions
             if (exam.questions && exam.questions.length > 0) {
                 li.innerHTML += `<ul class='mt-2'>`;
@@ -314,6 +316,25 @@
         alert('Erreur lors de la modification.');
       }
     }
+    window.deleteExam = async function(examId) {
+    if (!confirm("Voulez-vous vraiment supprimer cet examen ?")) return;
+
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API_URL}/api/exams/${examId}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    });
+
+    if (res.ok) {
+        alert("Examen supprimé avec succès !");
+        loadExams();
+    } else {
+        alert("Erreur lors de la suppression de l'examen.");
+    }
+}
+
 
     loadExams();
     </script>
