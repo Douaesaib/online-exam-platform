@@ -220,3 +220,13 @@ body {
     border-color: var(--error-color);
     background-color: rgba(231, 76, 60, 0.1);
 } 
+.lang-select {
+    width: 80px;
+    font-weight: 500;
+    font-size: 14px;
+    border-radius: 6px;
+    border: none;
+    padding: 5px 8px;
+    background-color: white;
+    color: var(--primary-color);
+}
